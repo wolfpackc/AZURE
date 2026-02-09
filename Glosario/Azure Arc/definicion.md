@@ -117,3 +117,30 @@ Es como si el servidor hiciera:
 “Hola Azure, existo y soy este”.
 
 ---
+✅ Sí
+
+Les instalas el agente (no es solo una “etiqueta”, es un agente software).
+
+Aparecen en el portal de Azure.
+
+Puedes gestionarlas (políticas, monitorización, parches, seguridad, etc.).
+
+❌ No
+
+NO pueden usar Managed Identity (MSI) como los servicios nativos de Azure.
+
+NO saltan las fronteras de tenant.
+
+🔑 Punto clave
+
+Azure Arc registra el servidor en TU tenant.
+
+Una vez registrado:
+
+➡️ Ese servidor pasa a pertenecer a tu tenant a efectos de identidad.
+
+Pero:
+
+No obtiene una Managed Identity automática como una VM nativa de Azure.
+
+Para acceder a otros servicios se usan service principals, certificados o credenciales, no MSI.
