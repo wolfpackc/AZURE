@@ -303,3 +303,118 @@ No hay usuario/contraseña.
 No hay secretos guardados.
 
 ---
+---
+---
+---
+
+#  **MEJORADO: Managed Identity en Azure**  
+
+---
+
+## 🔁 **FLUJO COMPLETO CORREGIDO**  
+```plaintext
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│    VM       │      │   IMDS      │      │   Entra ID  │
+│ (MSI Activo)│─────▶│ (Metadata   │─────▶│ (Genera y   │
+└─────────────┘      │  Service)   │      │  firma token)│
+                     └─────────────┘      └─────────────┘
+                           ▲                     ▲
+                           │                     │
+┌─────────────┐            │                     │
+│  RBAC       │            │                     │
+│ (Permisos   │            │                     │
+│  asignados) │            │                     │
+└─────────────┘            │                     │
+                           ▼                     ▼
+                     ┌─────────────┐      ┌─────────────┐
+                     │   Servicio  │      │   Validación│
+                     │ (Key Vault, │      │ (Clave     │
+                     │  Storage)   │─────▶│  Pública)   │
+                     └─────────────┘      └─────────────┘
+```
+
+**Pasos detallados:**  
+1. **Activar MSI** en la VM → Azure crea automáticamente una identidad en Entra ID.  
+2. **Asignar permisos RBAC** a la identidad de la VM (ej: "Reader" en Key Vault).  
+3. La **app en la VM** solicita token al **IMDS** (Instance Metadata Service).  
+4. IMDS redirige la solicitud a **Entra ID**.  
+5. Entra ID genera un **JWT firmado** con clave privada.  
+6. La app envía el token al **servicio destino** (ej: Key Vault).  
+7. El servicio **valida la firma** usando la clave pública de Microsoft.  
+8. ✅ **Acceso concedido** si la firma es válida.  
+
+---
+
+## 🔐 **ESTRUCTURA TÉCNICA DEL TOKEN JWT**  
+```plaintext
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ TOKEN JWT = [HEADER].[PAYLOAD].[SIGNATURE]                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ HEADER:                                                                     │
+│ {                                                                           │
+│   "alg": "RS256",                                                           │
+│   "typ": "JWT"                                                              │
+│ }                                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ PAYLOAD:                                                                    │
+│ {                                                                           │
+│   "iss": "https://login.microsoftonline.com/",                              │
+│   "sub": "vm-identity-id",                                                  │
+│   "aud": "https://vault.azure.net",                                         │
+│   "exp": 1741000000,                                                        │
+│   "roles": ["Reader"]                                                       │
+│ }                                                                           │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ SIGNATURE:                                                                  │
+│ HMACSHA256(                                                                 │
+│   base64UrlEncode(HEADER) + "." + base64UrlEncode(PAYLOAD),                  │
+│   CLAVE_PRIVADA_DE_MICROSOFT                                                │
+│ )                                                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🔍 **PROCESO DE VALIDACIÓN DEL TOKEN**  
+```plaintext
+Servicio recibe token
+│
+├─ Separa HEADER, PAYLOAD y SIGNATURE
+├─ Descarga clave pública de Microsoft (desde endpoint público)
+├─ Verifica SIGNATURE usando clave pública
+│  (No regenera el token, solo comprueba firma)
+│
+└─ Resultado:
+   ✅ Firma válida → Acceso permitido
+   ❌ Firma inválida → Acceso denegado
+```
+
+---
+
+## ✅ **CONCEPTOS CORRECTOS (CONFIRMADOS)**  
+- **Las VMs son identidades en Entra ID**:  
+  - Tienen permisos asignados via RBAC (igual que usuarios o grupos).  
+  - Ej: `VM-App01` con rol "Reader" en Key Vault.  
+- **Azure crea la identidad automáticamente**:  
+  - No se crea manualmente. Solo activas MSI en la VM.  
+- **El token NO es un hash**:  
+  - Es un **JWT firmado criptográficamente** (no se regenera para validar).  
+- **La validación usa clave pública**:  
+  - El servicio no necesita contraseña ni configurar IPs.  
+  - Valida la firma con la clave pública de Microsoft.  
+
+---
+
+## ❌ **ERRORES COMUNES CORREGIDOS**  
+| Error | Corrección |  
+|-------|------------|  
+| "Configurar el servicio para aceptar solo de esa VM" | **NO es una whitelist de IPs**. Se asignan permisos via RBAC a la identidad de la VM. |  
+| "El token se regenera para comparar" | **No se regenera**. Se verifica la firma con clave pública. |  
+| "El token es un hash simple" | **Es un JWT con estructura definida y firma criptográfica**. |  
+
+---
+
+## 💡 **RESUMEN FINAL**  
+> **"La VM tiene una identidad en Entra ID. Se le asignan permisos via RBAC. El token es un JWT firmado por Microsoft. El servicio valida la firma con clave pública, no compara hashes ni configura IPs"**.  
+
+*(Todo basado en tecnologías reales de Azure: IMDS, Entra ID, JWT, RBAC y firmas criptográficas)*.
