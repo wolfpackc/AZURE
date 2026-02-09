@@ -124,29 +124,182 @@ App → IMDS → token → Key Vault → secreto
 Key Vault NO participa en generar el token.
 Solo valida el token.
 
----
-
-# 🧠 7️⃣ Idea mental sencilla
-
-Piensa en esto:
-
-* IMDS = ventanilla interna de identidad
-* Managed Identity = tu carnet
-* Token = pulsera de acceso temporal
-* Key Vault = caja fuerte
-
-La pulsera te la da IMDS, no la caja fuerte.
 
 ---
+---
+---
 
-#  Resumen corto
+# 🧱 PIEZA 1 — Qué se crea cuando activas MSI
 
-✔️ La IP 169.254.169.254 es un endpoint interno
-✔️ Sirve para pedir tokens
-✔️ No usa contraseñas
-✔️ No usa Key Vault
-✔️ Azure AD emite el token
-✔️ Todo ocurre automáticamente
+Cuando en Azure marcas:
+
+> “Habilitar Managed Identity en esta VM”
+
+Azure hace automáticamente:
+
+👉 Crea un **objeto de identidad en Entra ID (Azure AD)**
+👉 Ese objeto representa a la VM
+
+Puedes imaginarlo así:
+
+> “Esta VM ahora tiene un usuario propio en el tenant”
+
+No tiene contraseña.
+No tiene clave.
+Solo existe como identidad.
+
+Ejemplo mental:
+
+```
+Tenant (Entra ID)
+ └── VM-App01 (identidad)
+```
 
 ---
 
+# 🧱 PIEZA 2 — Darle permisos a esa identidad
+
+Luego tú haces algo como:
+
+> Permitir que VM-App01 lea secretos de Key Vault
+> o
+> Permitir que VM-App01 lea blobs de Storage
+
+Eso significa:
+
+```
+Storage Account
+  Permite acceso a → VM-App01
+```
+
+Todavía **no hay tokens**, solo permisos configurados.
+
+---
+
+# 🧱 PIEZA 3 — La app quiere acceder a Storage
+
+Dentro de la VM corre una aplicación.
+
+La app dice:
+
+> “Necesito leer un archivo del Storage”
+
+Pero antes de llamar a Storage necesita **probar quién es**.
+
+Aquí entra IMDS.
+
+---
+
+# 🧱 PIEZA 4 — Petición al IMDS
+
+La app hace una llamada HTTP local:
+
+```
+http://169.254.169.254/metadata/identity/oauth2/token
+   ?resource=https://storage.azure.com/
+```
+
+Traducción humana:
+
+> “Hola IMDS, soy esta VM.
+> Dame un token para hablar con Storage.”
+
+---
+
+# 🧱 PIEZA 5 — Qué hace IMDS
+
+IMDS sabe exactamente:
+
+* En qué VM está
+* Qué identidad tiene asociada
+* En qué tenant está
+
+IMDS contacta internamente con Entra ID y dice:
+
+> “Esta petición viene de la VM-App01”
+
+---
+
+# 🧱 PIEZA 6 — Entra ID crea el TOKEN
+
+Entra ID genera un **access token**.
+
+Ese token es básicamente un bloque firmado que contiene:
+
+* Quién eres (VM-App01)
+* En qué tenant estás
+* Para qué servicio sirve (Storage)
+* Fecha de caducidad
+* Permisos
+
+Ejemplo conceptual:
+
+```
+TOKEN {
+  identidad: VM-App01
+  tenant: EmpresaX
+  recurso: Storage
+  expira: 10:35
+  firma: Microsoft
+}
+```
+
+No es una contraseña.
+Es una credencial temporal.
+
+---
+
+# 🧱 PIEZA 7 — IMDS devuelve el token a la app
+
+La app recibe el token.
+
+Ahora la app dice a Storage:
+
+```
+Oye Storage, aquí está mi token
+```
+
+Storage verifica la firma con Entra ID.
+
+Si es válido y VM-App01 tiene permisos:
+
+✅ Acceso concedido.
+
+---
+
+# 🔁 TODO EL FLUJO JUNTO
+
+```
+App
+ ↓
+IMDS (169.254.169.254)
+ ↓
+Entra ID
+ ↓
+Token
+ ↓
+IMDS
+ ↓
+App
+ ↓
+Servicio Azure (Storage / KeyVault / SQL...)
+```
+
+---
+
+# 🧠 Respuesta directa a tu duda clave
+
+> ¿El token se crea por las propiedades que hay en el tenant?
+
+👉 Sí.
+
+Más concretamente:
+
+✔️ Se crea a partir de la **identidad de la VM registrada en Entra ID**
+✔️ Esa identidad existe porque tú activaste MSI
+✔️ Los permisos los defines tú después
+
+No hay usuario/contraseña.
+No hay secretos guardados.
+
+---
