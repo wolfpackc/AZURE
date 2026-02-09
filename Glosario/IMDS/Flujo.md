@@ -80,4 +80,4 @@ La app solo “pide al portero dentro de la casa” y obtiene el pase.
 # 6️⃣ Frase corta para memorizar
 
 > IMDS es un servicio interno de la VM que te da tokens temporales.
-> La IP 169.254.169.254 solo existe dentro de la VM, como un portero interno que nunca sale afuera.
+> La IP 169.254.169.254 solo existe dentro de la VM.
