@@ -78,42 +78,6 @@ Dura minutos y luego caduca.
 
 ---
 
-## 🔐 Ahora la parte importante de seguridad
-
-Antes de MSI, lo típico era:
-
-```txt
-USUARIO=admin
-PASSWORD=SuperSecreta123
-```
-
-Guardado en:
-
-* Archivos
-* Variables de entorno
-* Código
-
-Eso es peligroso porque:
-
-❌ Se puede filtrar
-❌ Se sube a GitHub sin querer
-❌ Alguien lo copia
-
----
-
-##  Con MSI
-
-No hay secretos guardados.
-
-El token:
-
-* Se pide en tiempo real
-* Vive en memoria
-* Caduca solo
-
-No existe nada fijo que robar.
-
----
 
 ## 🔁 “eliminando el error humano en la rotación de claves”
 
