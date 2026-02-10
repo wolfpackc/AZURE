@@ -287,23 +287,25 @@ Servicio Azure (Storage / KeyVault / SQL...)
 
 ---
 
-# 🧠 Respuesta directa a tu duda clave
+#  Respuesta directa a tu duda clave
 
 > ¿El token se crea por las propiedades que hay en el tenant?
 
-👉 Sí.
+ Sí.
 
 Más concretamente:
 
 ✔️ Se crea a partir de la **identidad de la VM registrada en Entra ID**
+
 ✔️ Esa identidad existe porque tú activaste MSI
+
 ✔️ Los permisos los defines tú después
 
+
 No hay usuario/contraseña.
+
 No hay secretos guardados.
 
----
----
 ---
 ---
 
@@ -312,26 +314,6 @@ No hay secretos guardados.
 ---
 
 ## 🔁 **FLUJO COMPLETO CORREGIDO**  
-```plaintext
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│    VM       │      │   IMDS      │      │   Entra ID  │
-│ (MSI Activo)│─────▶│ (Metadata   │─────▶│ (Genera y   │
-└─────────────┘      │  Service)   │      │  firma token)│
-                     └─────────────┘      └─────────────┘
-                           ▲                     ▲
-                           │                     │
-┌─────────────┐            │                     │
-│  RBAC       │            │                     │
-│ (Permisos   │            │                     │
-│  asignados) │            │                     │
-└─────────────┘            │                     │
-                           ▼                     ▼
-                     ┌─────────────┐      ┌─────────────┐
-                     │   Servicio  │      │   Validación│
-                     │ (Key Vault, │      │ (Clave     │
-                     │  Storage)   │─────▶│  Pública)   │
-                     └─────────────┘      └─────────────┘
-```
 
 **Pasos detallados:**  
 1. **Activar MSI** en la VM → Azure crea automáticamente una identidad en Entra ID.  
