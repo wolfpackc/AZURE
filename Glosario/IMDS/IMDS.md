@@ -397,24 +397,8 @@ Servicio recibe token
   - Ej: `VM-App01` con rol "Reader" en Key Vault.  
 - **Azure crea la identidad automáticamente**:  
   - No se crea manualmente. Solo activas MSI en la VM.  
-- **El token NO es un hash**:  
-  - Es un **JWT firmado criptográficamente** (no se regenera para validar).  
-- **La validación usa clave pública**:  
-  - El servicio no necesita contraseña ni configurar IPs.  
-  - Valida la firma con la clave pública de Microsoft.  
-
----
-
-## ❌ **ERRORES COMUNES CORREGIDOS**  
-| Error | Corrección |  
-|-------|------------|  
-| "Configurar el servicio para aceptar solo de esa VM" | **NO es una whitelist de IPs**. Se asignan permisos via RBAC a la identidad de la VM. |  
-| "El token se regenera para comparar" | **No se regenera**. Se verifica la firma con clave pública. |  
-| "El token es un hash simple" | **Es un JWT con estructura definida y firma criptográfica**. |  
 
 ---
 
 ## 💡 **RESUMEN FINAL**  
 > **"La VM tiene una identidad en Entra ID. Se le asignan permisos via RBAC. El token es un JWT firmado por Microsoft. El servicio valida la firma con clave pública, no compara hashes ni configura IPs"**.  
-
-*(Todo basado en tecnologías reales de Azure: IMDS, Entra ID, JWT, RBAC y firmas criptográficas)*.
